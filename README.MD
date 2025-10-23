@@ -60,6 +60,7 @@ The Arduino development environment is fully configured and ready to use. You'll
 ### Quick Commands
 
 **From Terminal:**
+
 ```bash
 # Compile the sketch
 arduino-cli compile --fqbn arduino:avr:leonardo src/hello-world
@@ -94,3 +95,102 @@ For more information about the Arduino extension for VSCode, consult [this page]
 ## External librairies
 
 If you need to install external librairies, use the `arduino-cli lib install` command. See the end of the Docker files for more information.
+
+## Remote Development Setup
+
+### Using Arduino with Remote Dev Containers
+
+If you want to develop in a remote dev container while your Arduino is physically connected to your local machine, you can use the included `local-arduino-proxy.sh` script to forward the serial connection over TCP.
+
+#### Prerequisites
+
+**Local Machine (where Arduino is connected):**
+
+- **Linux/macOS**: Install `socat`
+
+  ```bash
+  # Debian/Ubuntu
+  sudo apt install socat
+  
+  # Fedora/RHEL
+  sudo dnf install socat
+  
+  # macOS
+  brew install socat
+  
+  # NixOS
+  nix-shell -p socat
+  # or with flakes: nix develop
+  ```
+
+- **Windows**: Install `winsocat`
+
+  ```powershell
+  # Using winget
+  winget install -e --id Firejox.WinSocat
+  ```
+
+  More info: [WinSocat GitHub](https://github.com/firejox/WinSocat)
+
+- **Optional**: `arduino-cli` for auto-detection of Arduino boards
+
+#### How to Use
+
+1. **On your local machine** (where Arduino is connected), run the proxy script:
+
+   ```bash
+   ./local-arduino-proxy.sh
+   ```
+
+   The script will:
+   - ✅ Auto-detect your Arduino board (if `arduino-cli` is installed)
+   - ✅ Start a TCP proxy on `localhost:5000`
+   - ✅ Forward all traffic to/from your Arduino
+
+   **Manual port specification** (if auto-detection fails):
+
+   ```bash
+   # Linux/macOS
+   ./local-arduino-proxy.sh /dev/ttyACM0
+   
+   # Windows
+   ./local-arduino-proxy.sh COM3
+   ```
+
+   **Custom TCP port**:
+
+   ```bash
+   ./local-arduino-proxy.sh /dev/ttyACM0 8080
+   ```
+
+2. **Keep the terminal window open** - The proxy needs to run while you're developing
+
+3. **Connect from remote dev container**: Your Arduino is now accessible at `localhost:5000` from your remote machine
+
+#### Cross-Platform Support
+
+The `local-arduino-proxy.sh` script supports:
+
+- ✅ **Linux** - Uses standard `socat`
+- ✅ **macOS** - Uses standard `socat`
+- ✅ **Windows** - Uses `winsocat` (WinSocat project)
+- ✅ **WSL** - Uses `socat` in WSL environment
+- ✅ **NixOS** - Includes in flake dependencies
+
+The script automatically detects which tool is available and uses the appropriate one.
+
+#### Troubleshooting
+
+##### "socat/winsocat is not installed"
+
+- Follow the installation instructions above for your platform
+
+##### "No Arduino board detected"
+
+- Install `arduino-cli` for auto-detection, OR
+- Manually specify the port: `./local-arduino-proxy.sh /dev/ttyACM0`
+
+##### "Port already in use"
+
+- Another application is using port 5000
+- Specify a different port: `./local-arduino-proxy.sh /dev/ttyACM0 8080`
