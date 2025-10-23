@@ -105,8 +105,9 @@ You can install multiple platforms by combining them. The setup script will auto
 ## Platform Priority
 
 The setup script will automatically choose platforms in this priority order:
+
 1. ESP32 (if installed)
-2. ESP8266 (if installed) 
+2. ESP8266 (if installed)
 3. Arduino AVR (default fallback)
 
 ## Board Configuration
@@ -114,16 +115,19 @@ The setup script will automatically choose platforms in this priority order:
 After the container is created, you can change the specific board by editing `.vscode/arduino.json`:
 
 ### ESP8266 Boards
+
 - `esp8266:esp8266:nodemcuv2` - NodeMCU 1.0
 - `esp8266:esp8266:d1_mini` - Wemos D1 Mini
 - `esp8266:esp8266:generic` - Generic ESP8266
 
-### ESP32 Boards  
+### ESP32 Boards
+
 - `esp32:esp32:esp32dev` - ESP32 Dev Module
 - `esp32:esp32:nodemcu-32s` - NodeMCU-32S
 - `esp32:esp32:esp32-c3-devkitm-1` - ESP32-C3 DevKitM-1
 
 ### Arduino AVR Boards
+
 - `arduino:avr:uno` - Arduino Uno
 - `arduino:avr:leonardo` - Arduino Leonardo  
 - `arduino:avr:mega` - Arduino Mega 2560
