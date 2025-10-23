@@ -1,0 +1,45 @@
+{
+	"name": "Arduino ESP8266 dev",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".",
+		"args": {
+			"VERSION": "1",
+			"VARIANT": "debian-11",
+			"USER_NAME": "vscode",
+			"ARDUINO_CLI_VERSION": "latest",
+			"DIALOUT_GID": "20",
+			"PACKAGE_URL": "http://arduino.esp8266.com/stable/package_esp8266com_index.json",
+			"PLATFORM": "esp8266:esp8266"
+		 }
+	},
+
+	"customizations": {
+		"vscode": {
+			"settings": { 
+				"arduino.useArduinoCli": true,
+				"arduino.logLevel": "verbose"
+			},
+			"extensions": [
+				"vsciot-vscode.vscode-arduino",
+				"yzhang.markdown-all-in-one",
+				"ms-vscode.cpptools"
+			]
+		}
+	},
+
+	"postCreateCommand": "bash .devcontainer/setup-arduino.sh",
+
+	"mounts": [
+		"source=/dev,target=/dev,type=bind"
+	],
+	
+	"runArgs": [
+		"--privileged",
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined"
+	],
+
+	"remoteUser": "vscode"
+}
