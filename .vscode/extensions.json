@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "vscode-arduino.vscode-arduino-community",
+    "yzhang.markdown-all-in-one",
+    "ms-vscode-remote.remote-containers"
+  ]
+}

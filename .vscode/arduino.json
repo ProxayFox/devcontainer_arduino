@@ -2,6 +2,6 @@
     "sketch": "src/hello-world/hello-world.ino",
     "board": "arduino:avr:leonardo",
     "output": "output",
-    "port": "/dev/ttyACM0",
+    "port": "/dev/ttyUSB0",
     "programmer": "arduino:usbtinyisp"
 }
