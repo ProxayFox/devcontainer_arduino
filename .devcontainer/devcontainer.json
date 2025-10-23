@@ -9,7 +9,10 @@
 			"VARIANT": "debian-11",
 			"USER_NAME": "vscode",
 			"ARDUINO_CLI_VERSION": "latest", // Pin exact version if reproducibility needed
-			"DIALOUT_GID": "20" // Override at build time if host dialout differs
+			"DIALOUT_GID": "20", // Override at build time if host dialout differs
+			// Arduino platform configuration
+			"PACKAGE_URL": "", // Optional: Additional board manager URLs (e.g., ESP8266, ESP32)
+			"PLATFORM": "" // Optional: Additional platform to install (e.g., "esp8266:esp8266", "esp32:esp32")
 		 }
 	},
 
@@ -17,17 +20,24 @@
 		"vscode": {
 			// Add the IDs of extensions you want installed when the container is created.
 			"settings": { 
-				"arduino.path": "/opt/arduino",
+				"arduino.useArduinoCli": true,
+				"arduino.path": "/usr/local/bin/arduino-cli",
+				"arduino.additionalUrls": ["${containerEnv.PACKAGE_URL}"],
+				"arduino.defaultBoard": "${containerEnv.PLATFORM}",
 				"arduino.logLevel": "verbose"
 			},
 			// Set *default* container specific settings.json values on container create.
 			"extensions": [
-				"vsciot-vscode.vscode-arduino",
+				"vscode-arduino.vscode-arduino-community",
 				"yzhang.markdown-all-in-one",
-				"vsciot-vscode.vscode-arduino"
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.vscode-serial-monitor"
 			]
 		}
 	},
+
+	"postCreateCommand": "bash .devcontainer/setup-arduino.sh",
 
 	"mounts": [
 		"source=/dev,target=/dev,type=bind"

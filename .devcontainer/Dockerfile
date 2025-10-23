@@ -4,6 +4,8 @@ FROM mcr.microsoft.com/vscode/devcontainers/cpp:0-${VARIANT}
 ARG ARDUINO_CLI_VERSION
 ARG USER_NAME
 ARG DIALOUT_GID=20  # Fallback if not overridden at build time
+ARG PACKAGE_URL=""
+ARG PLATFORM=""
 
 RUN apt update \
     && apt install -y \
@@ -12,7 +14,8 @@ RUN apt update \
     curl \
     ca-certificates \
     tar \
-    gzip
+    gzip \
+    jq
 
 # Configure dialout group mapping without external envfile.
 # If a group already has the target GID, reuse it; otherwise create one.
@@ -45,8 +48,27 @@ RUN set -eu; \
     rmdir bin || true; \
     arduino-cli version
 
+# Initialize Arduino CLI configuration, install cores, and update index
+# Run as root initially to set up system-wide config and cores
+# '--config-file' ensures we use a predictable location
+# '--additional-urls' adds additional board manager sources (e.g., ESP8266)
+RUN mkdir -p /home/${USER_NAME}/.arduino15 \
+    && arduino-cli config init --overwrite --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml \
+    && if [ -n "${PACKAGE_URL}" ]; then \
+        arduino-cli config set --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml board_manager.additional_urls "${PACKAGE_URL}"; \
+    fi \
+    && arduino-cli core update-index --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml \
+    && arduino-cli core install arduino:avr --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml \
+    && if [ -n "${PLATFORM}" ]; then \
+        arduino-cli core install "${PLATFORM}" --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml; \
+    fi \
+    && chown -R ${USER_NAME}:${USER_NAME} /home/${USER_NAME}/.arduino15
+
 # Set the default user
 USER $USER_NAME
+
+# Setup Arduino environment for user (update index again as user)
+RUN arduino-cli core update-index --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml
 
 LABEL desccription="Image based on Debuan providing Arduino build and debug environment"
 
