@@ -12,7 +12,11 @@
 			"DIALOUT_GID": "20", // Override at build time if host dialout differs
 			// Arduino platform configuration
 			"PACKAGE_URL": "", // Optional: Additional board manager URLs (e.g., ESP8266, ESP32)
-			"PLATFORM": "" // Optional: Additional platform to install (e.g., "esp8266:esp8266", "esp32:esp32")
+			"PLATFORM": "", // Optional: Additional platform to install (e.g., "esp8266:esp8266", "esp32:esp32")
+			// Remote Arduino configuration
+			"REMOTE_MODE": "true", // Set to "false" for local development
+			"REMOTE_HOST": "localhost", // Use localhost - VS Code will forward the port
+			"REMOTE_PORT": "5000" // TCP port for Arduino proxy (forwarded by VS Code)
 		 }
 	},
 
@@ -37,7 +41,18 @@
 		}
 	},
 
-	"postCreateCommand": "bash .devcontainer/setup-arduino.sh",
+	// Configure setup command based on remote mode
+	"postCreateCommand": "bash .devcontainer/setup-arduino.sh $([ \"$REMOTE_MODE\" = \"true\" ] && echo \"--remote --host $REMOTE_HOST --port $REMOTE_PORT\" || echo \"\")",
+
+	// Forward Arduino proxy port from local machine to container
+	"forwardPorts": [5000],
+	"portsAttributes": {
+		"5000": {
+			"label": "Arduino Serial Proxy",
+			"onAutoForward": "silent",
+			"requireLocalPort": true
+		}
+	},
 
 	"mounts": [
 		"source=/dev,target=/dev,type=bind"
@@ -47,7 +62,8 @@
 		"--privileged",
 		"--cap-add=SYS_PTRACE",
 		"--security-opt",
-		"seccomp=unconfined"
+		"seccomp=unconfined",
+		"--add-host=host.docker.internal:host-gateway"
 	],
 
 	"remoteUser": "vscode"

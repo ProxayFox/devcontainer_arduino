@@ -3,3 +3,4 @@
 /.devcontainer/envfile
 *.hex
 .direnv
+local-arduino-proxy.sh

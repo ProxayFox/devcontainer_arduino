@@ -1,7 +1,55 @@
 #!/bin/bash
 set -e
 
-echo "🔧 Setting up Arduino development environment..."
+# Parse command line arguments
+REMOTE_MODE=false
+REMOTE_HOST="localhost"
+REMOTE_PORT="5000"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --remote)
+            REMOTE_MODE=true
+            shift
+            ;;
+        --host)
+            REMOTE_HOST="$2"
+            shift 2
+            ;;
+        --port)
+            REMOTE_PORT="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--remote] [--host HOST] [--port PORT]"
+            echo ""
+            echo "Options:"
+            echo "  --remote          Configure for remote Arduino access via TCP proxy"
+            echo "  --host HOST       Remote host running the Arduino proxy (default: localhost)"
+            echo "  --port PORT       TCP port for Arduino proxy (default: 5000)"
+            echo "  --help, -h        Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                    # Local Arduino development"
+            echo "  $0 --remote           # Remote via localhost:5000"
+            echo "  $0 --remote --host 192.168.1.100 --port 8080"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
+
+if [ "$REMOTE_MODE" = true ]; then
+    echo "🌐 Setting up Arduino development environment for REMOTE access..."
+    echo "   Host: $REMOTE_HOST"
+    echo "   Port: $REMOTE_PORT"
+else
+    echo "🔧 Setting up Arduino development environment for LOCAL access..."
+fi
 
 # Ensure Arduino CLI is available and update core index
 arduino-cli core update-index
@@ -11,34 +59,54 @@ echo "📦 Installed Arduino cores:"
 arduino-cli core list
 
 # Auto-detect connected Arduino boards
-echo "🔍 Scanning for connected Arduino boards..."
-BOARD_LIST=$(arduino-cli board list --format text)
-echo "$BOARD_LIST"
-
-# Extract board information from connected devices
-DETECTED_PORT=""
-DETECTED_FQBN=""
-DETECTED_BOARD_NAME=""
-DETECTED_CORE=""
-
-# Parse board list output (skip header line)
-while IFS= read -r line; do
-    if [[ "$line" =~ ^/dev/ ]]; then
-        # Extract fields: Port, Protocol, Type, Board Name, FQBN, Core
-        DETECTED_PORT=$(echo "$line" | awk '{print $1}')
-        # Extract board name (everything between "Type" and "FQBN")
-        DETECTED_BOARD_NAME=$(echo "$line" | sed 's/^[^[:space:]]*[[:space:]]*[^[:space:]]*[[:space:]]*[^[:space:]]*[[:space:]]*//' | sed 's/[[:space:]]*[^[:space:]]*[[:space:]]*[^[:space:]]*$//')
-        DETECTED_FQBN=$(echo "$line" | awk '{print $(NF-1)}')
-        DETECTED_CORE=$(echo "$line" | awk '{print $NF}')
-        
-        echo "📱 Found connected board:"
-        echo "   Port: $DETECTED_PORT"
-        echo "   Board: $DETECTED_BOARD_NAME"
-        echo "   FQBN: $DETECTED_FQBN"
-        echo "   Core: $DETECTED_CORE"
-        break  # Use the first detected board
+if [ "$REMOTE_MODE" = true ]; then
+    echo "🌐 Configuring for remote Arduino access..."
+    
+    # Test connection to remote proxy
+    echo "🔍 Testing connection to remote Arduino proxy..."
+    if timeout 5 bash -c "</dev/tcp/$REMOTE_HOST/$REMOTE_PORT"; then
+        echo "✅ Successfully connected to $REMOTE_HOST:$REMOTE_PORT"
+    else
+        echo "⚠️  Could not connect to $REMOTE_HOST:$REMOTE_PORT"
+        echo "   Make sure the local-arduino-proxy.sh is running on the host machine"
+        echo "   You can continue setup, but Arduino communication may not work until the proxy is started"
     fi
-done <<< "$BOARD_LIST"
+    
+    # Skip board detection in remote mode (proxy handles the Arduino connection)
+    DETECTED_PORT=""
+    DETECTED_FQBN=""
+    DETECTED_BOARD_NAME=""
+    DETECTED_CORE=""
+else
+    echo "🔍 Scanning for connected Arduino boards..."
+    BOARD_LIST=$(arduino-cli board list --format text)
+    echo "$BOARD_LIST"
+
+    # Extract board information from connected devices
+    DETECTED_PORT=""
+    DETECTED_FQBN=""
+    DETECTED_BOARD_NAME=""
+    DETECTED_CORE=""
+
+    # Parse board list output (skip header line)
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^/dev/ ]]; then
+            # Extract fields: Port, Protocol, Type, Board Name, FQBN, Core
+            DETECTED_PORT=$(echo "$line" | awk '{print $1}')
+            # Extract board name (everything between "Type" and "FQBN")
+            DETECTED_BOARD_NAME=$(echo "$line" | sed 's/^[^[:space:]]*[[:space:]]*[^[:space:]]*[[:space:]]*[^[:space:]]*[[:space:]]*//' | sed 's/[[:space:]]*[^[:space:]]*[[:space:]]*[^[:space:]]*$//')
+            DETECTED_FQBN=$(echo "$line" | awk '{print $(NF-1)}')
+            DETECTED_CORE=$(echo "$line" | awk '{print $NF}')
+            
+            echo "📱 Found connected board:"
+            echo "   Port: $DETECTED_PORT"
+            echo "   Board: $DETECTED_BOARD_NAME"
+            echo "   FQBN: $DETECTED_FQBN"
+            echo "   Core: $DETECTED_CORE"
+            break  # Use the first detected board
+        fi
+    done <<< "$BOARD_LIST"
+fi
 
 # Auto-detect the primary platform (prefer detected board, fallback to installed cores)
 INSTALLED_CORES=$(arduino-cli core list --format text | awk 'NR>1 {print $1}')
@@ -46,7 +114,13 @@ PRIMARY_PLATFORM=""
 BOARD_FQBN=""
 DEFINES=()
 BOARD_NAME=""
-ARDUINO_PORT="/dev/ttyUSB0"  # Default fallback
+
+# Configure Arduino port based on mode
+if [ "$REMOTE_MODE" = true ]; then
+    ARDUINO_PORT="$REMOTE_HOST:$REMOTE_PORT"
+else
+    ARDUINO_PORT="/dev/ttyUSB0"  # Default fallback for local mode
+fi
 
 echo "🔍 Detected cores: $INSTALLED_CORES"
 
@@ -129,15 +203,29 @@ else
             "arduino:avr")
                 if [ -z "$PRIMARY_PLATFORM" ]; then
                     PRIMARY_PLATFORM="arduino:avr"
-                    BOARD_FQBN="arduino:avr:leonardo"
-                    BOARD_NAME="Arduino Leonardo"
-                    DEFINES=(
-                        "ARDUINO=10819"
-                        "ARDUINO_AVR_LEONARDO"
-                        "ARDUINO_ARCH_AVR"
-                        "__AVR_ATmega32u4__"
-                        "F_CPU=16000000L"
-                    )
+                    if [ "$REMOTE_MODE" = true ]; then
+                        # For remote mode, prefer Leonardo (USB-native, no DTR reset issues)
+                        BOARD_FQBN="arduino:avr:leonardo"
+                        BOARD_NAME="Arduino Leonardo"
+                        DEFINES=(
+                            "ARDUINO=10819"
+                            "ARDUINO_AVR_LEONARDO"
+                            "ARDUINO_ARCH_AVR"
+                            "__AVR_ATmega32u4__"
+                            "F_CPU=16000000L"
+                        )
+                    else
+                        # For local mode, use Uno as default
+                        BOARD_FQBN="arduino:avr:uno"
+                        BOARD_NAME="Arduino Uno"
+                        DEFINES=(
+                            "ARDUINO=10819"
+                            "ARDUINO_AVR_UNO"
+                            "ARDUINO_ARCH_AVR"
+                            "__AVR_ATmega328P__"
+                            "F_CPU=16000000L"
+                        )
+                    fi
                 fi
                 ;;
             "esp8266:esp8266")
@@ -178,15 +266,29 @@ if [ -z "$PRIMARY_PLATFORM" ]; then
     echo "⚠️  No recognized Arduino cores found, installing Arduino AVR as fallback..."
     arduino-cli core install arduino:avr
     PRIMARY_PLATFORM="arduino:avr"
-    BOARD_FQBN="arduino:avr:leonardo"
-    BOARD_NAME="Arduino Leonardo"
-    DEFINES=(
-        "ARDUINO=10819"
-        "ARDUINO_AVR_LEONARDO"
-        "ARDUINO_ARCH_AVR"
-        "__AVR_ATmega32u4__"
-        "F_CPU=16000000L"
-    )
+    if [ "$REMOTE_MODE" = true ]; then
+        # For remote mode, prefer Leonardo (USB-native, no DTR reset issues)
+        BOARD_FQBN="arduino:avr:leonardo"
+        BOARD_NAME="Arduino Leonardo"
+        DEFINES=(
+            "ARDUINO=10819"
+            "ARDUINO_AVR_LEONARDO"
+            "ARDUINO_ARCH_AVR"
+            "__AVR_ATmega32u4__"
+            "F_CPU=16000000L"
+        )
+    else
+        # For local mode, use Uno as default
+        BOARD_FQBN="arduino:avr:uno"
+        BOARD_NAME="Arduino Uno"
+        DEFINES=(
+            "ARDUINO=10819"
+            "ARDUINO_AVR_UNO"
+            "ARDUINO_ARCH_AVR"
+            "__AVR_ATmega328P__"
+            "F_CPU=16000000L"
+        )
+    fi
 fi
 
 echo "🎯 Using platform: $PRIMARY_PLATFORM"
@@ -298,7 +400,76 @@ cat > .vscode/c_cpp_properties.json << EOF
 EOF
 
 # Update workspace Arduino configuration
-cat > .vscode/arduino.json << EOF
+if [ "$REMOTE_MODE" = true ]; then
+    # For remote mode, we'll create a bridge setup script but not run it during setup
+    # The bridge will be created manually after VS Code port forwarding is active
+    
+    # Create a script to set up the TCP-to-serial bridge
+    cat > /workspaces/devcontainer_arduino/start-arduino-bridge.sh << EOF
+#!/bin/bash
+# Arduino TCP-to-Serial Bridge Setup Script
+# Run this script AFTER the dev container is fully started and port forwarding is active
+
+echo "🌐 Setting up Arduino TCP-to-serial bridge..."
+
+# Kill any existing socat processes for this port
+pkill -f "socat.*pty.*TCP" 2>/dev/null || true
+
+# Wait a moment for processes to clean up
+sleep 1
+
+# Test if the forwarded port is available
+if ! timeout 5 bash -c "</dev/tcp/$REMOTE_HOST/$REMOTE_PORT"; then
+    echo "❌ Cannot connect to $REMOTE_HOST:$REMOTE_PORT"
+    echo "   Make sure:"
+    echo "   1. local-arduino-proxy.sh is running on your local machine"
+    echo "   2. VS Code port forwarding is active (check Ports panel)"
+    echo "   3. Port $REMOTE_PORT is forwarded from local to container"
+    exit 1
+fi
+
+echo "✅ Port forwarding is working"
+
+# Create a pseudo-terminal that bridges to the TCP connection
+echo "🔗 Creating serial bridge..."
+socat pty,link=/tmp/arduino_bridge,raw,echo=0 TCP:$REMOTE_HOST:$REMOTE_PORT &
+SOCAT_PID=\$!
+
+# Wait for the link to be created
+sleep 3
+
+# Make sure the link was created successfully
+if [ -L /tmp/arduino_bridge ]; then
+    echo "✅ Serial bridge created at /tmp/arduino_bridge"
+    echo "   PID: \$SOCAT_PID"
+    echo "   Bridge: /tmp/arduino_bridge ↔ $REMOTE_HOST:$REMOTE_PORT"
+    echo ""
+    echo "🎯 Arduino is now ready for uploads!"
+    echo "   Use 'arduino-cli upload -p /tmp/arduino_bridge --fqbn YOUR_BOARD src/hello-world'"
+    echo "   Or use the VS Code Arduino extension normally"
+    
+    # Save PID for later cleanup
+    echo \$SOCAT_PID > /tmp/arduino_bridge.pid
+    
+    # Keep the bridge running in the background
+    disown
+else
+    echo "❌ Failed to create serial bridge"
+    kill \$SOCAT_PID 2>/dev/null
+    exit 1
+fi
+EOF
+    
+    chmod +x /workspaces/devcontainer_arduino/start-arduino-bridge.sh
+    
+    echo "🌐 Bridge setup script created at: /workspaces/devcontainer_arduino/start-arduino-bridge.sh"
+    echo "   Run this script manually after the container is fully started"
+    
+    # For now, configure arduino.json to use the bridge path
+    # But note that the bridge won't exist until the script is run
+    ARDUINO_PORT="/tmp/arduino_bridge"
+    
+    cat > .vscode/arduino.json << EOF
 {
     "sketch": "src/hello-world/hello-world.ino",
     "board": "$BOARD_FQBN",
@@ -307,6 +478,17 @@ cat > .vscode/arduino.json << EOF
     "programmer": "arduino:usbtinyisp"
 }
 EOF
+else
+    cat > .vscode/arduino.json << EOF
+{
+    "sketch": "src/hello-world/hello-world.ino",
+    "board": "$BOARD_FQBN",
+    "output": "output",
+    "port": "$ARDUINO_PORT",
+    "programmer": "arduino:usbtinyisp"
+}
+EOF
+fi
 
 # Update workspace settings
 cat > .vscode/settings.json << EOF
@@ -316,23 +498,49 @@ cat > .vscode/settings.json << EOF
 }
 EOF
 
-# Fix permissions for Arduino devices
-echo "🔒 Setting up device permissions..."
-sudo usermod -a -G dialout,sudo vscode || true
-# Set permissions for common Arduino device paths
-for device in /dev/ttyUSB* /dev/ttyACM*; do
-    if [ -e "$device" ]; then
-        sudo chmod 666 "$device" 2>/dev/null || true
-        echo "   📱 Set permissions for $device"
-    fi
-done
+# Fix permissions for Arduino devices (local mode only)
+if [ "$REMOTE_MODE" = false ]; then
+    echo "🔒 Setting up device permissions..."
+    sudo usermod -a -G dialout,sudo vscode || true
+    # Set permissions for common Arduino device paths
+    for device in /dev/ttyUSB* /dev/ttyACM*; do
+        if [ -e "$device" ]; then
+            sudo chmod 666 "$device" 2>/dev/null || true
+            echo "   📱 Set permissions for $device"
+        fi
+    done
+else
+    echo "🌐 Skipping device permissions setup (remote mode)"
+fi
 
 echo "✅ Arduino development environment setup complete!"
-echo "🎯 Platform: $PRIMARY_PLATFORM"
+if [ "$REMOTE_MODE" = true ]; then
+    echo "� Mode: REMOTE ($REMOTE_HOST:$REMOTE_PORT)"
+else
+    echo "🔧 Mode: LOCAL"
+fi
+echo "�🎯 Platform: $PRIMARY_PLATFORM"
 echo "🏷️  Board: $BOARD_NAME ($BOARD_FQBN)"
 echo "📱 Port: $ARDUINO_PORT"
 echo ""
 echo "📋 You can now:"
 echo "   - Use IntelliSense with Arduino functions"
 echo "   - Compile with: arduino-cli compile --fqbn $BOARD_FQBN src/hello-world"
-echo "   - Upload with: arduino-cli upload -p $ARDUINO_PORT --fqbn $BOARD_FQBN src/hello-world"
+if [ "$REMOTE_MODE" = true ]; then
+    echo "   - Upload with: arduino-cli upload -p $ARDUINO_PORT --fqbn $BOARD_FQBN src/hello-world"
+    echo ""
+    echo "💡 Remote mode setup steps:"
+    echo "   1. Make sure local-arduino-proxy.sh is running on your local machine"
+    echo "   2. Verify port 5000 is forwarded in VS Code (check Ports panel)"
+    echo "   3. Run: ./start-arduino-bridge.sh"
+    echo "   4. After bridge is created, uploads will work normally"
+    echo ""
+    echo "⚠️  Arduino Uno Note: Uno boards may have upload issues via TCP bridge due to"
+    echo "   DTR/RTS reset signal requirements. Consider using Arduino Leonardo for"
+    echo "   remote development, or manually reset the Uno during upload attempts."
+    echo ""
+    echo "🔧 Manual bridge setup:"
+    echo "   ./start-arduino-bridge.sh"
+else
+    echo "   - Upload with: arduino-cli upload -p $ARDUINO_PORT --fqbn $BOARD_FQBN src/hello-world"
+fi

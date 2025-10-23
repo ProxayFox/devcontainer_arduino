@@ -130,4 +130,10 @@ echo """
 #   - Forks for each connection
 #   - Allows port reuse
 #   - Connects to Arduino serial port with specified baud rate
+#   - Enables raw mode and disables echo for binary data
+echo "🚀 Starting proxy (press Ctrl+C to stop)..."
+echo ""
+
+# For Arduino Uno, we need to handle DTR reset properly
+# Use rawer mode to better handle reset signals
 $SOCAT_CMD TCP-LISTEN:${TCP_PORT},fork,reuseaddr FILE:${ARDUINO_PORT},b${BAUD_RATE},raw,echo=0

@@ -6,6 +6,9 @@ ARG USER_NAME
 ARG DIALOUT_GID=20  # Fallback if not overridden at build time
 ARG PACKAGE_URL=""
 ARG PLATFORM=""
+ARG REMOTE_MODE="false"
+ARG REMOTE_HOST="localhost"
+ARG REMOTE_PORT="5000"
 
 RUN apt update \
     && apt install -y \
@@ -15,7 +18,8 @@ RUN apt update \
     ca-certificates \
     tar \
     gzip \
-    jq
+    jq \
+    socat
 
 # Configure dialout group mapping without external envfile.
 # If a group already has the target GID, reuse it; otherwise create one.
@@ -69,6 +73,11 @@ USER $USER_NAME
 
 # Setup Arduino environment for user (update index again as user)
 RUN arduino-cli core update-index --config-file /home/${USER_NAME}/.arduino15/arduino-cli.yaml
+
+# Set environment variables for Arduino remote configuration
+ENV REMOTE_MODE=${REMOTE_MODE}
+ENV REMOTE_HOST=${REMOTE_HOST}
+ENV REMOTE_PORT=${REMOTE_PORT}
 
 LABEL desccription="Image based on Debuan providing Arduino build and debug environment"
 
