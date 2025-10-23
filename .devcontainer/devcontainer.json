@@ -5,10 +5,11 @@
 		"dockerfile": "Dockerfile",
 		"context": ".",
 		"args": {
-			"USER_NAME": "vscode",
+			"VERSION": "1",
 			"VARIANT": "debian-11",
-			"ARDUINO_IDE_VERSION": "1.8.19",
-			"ARDUINO_CLI_VERSION": "0.13.0"
+			"USER_NAME": "vscode",
+			"ARDUINO_CLI_VERSION": "latest", // Pin exact version if reproducibility needed
+			"DIALOUT_GID": "20" // Override at build time if host dialout differs
 		 }
 	},
 
@@ -38,8 +39,6 @@
 		"--security-opt",
 		"seccomp=unconfined"
 	],
-
-	"initializeCommand": "printf DIALOUT_GID=$(getent group dialout | cut -d ':' -f 3)\\\\n > ${localWorkspaceFolder}/.devcontainer/envfile",
 
 	"remoteUser": "vscode"
 }
