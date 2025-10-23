@@ -14,17 +14,20 @@ This directory contains the configuration for the Arduino development container.
 When the devcontainer is created, the following setup happens automatically:
 
 ### 1. Arduino CLI & Cores
+
 - Arduino CLI is installed during container build
 - Arduino AVR core is always installed for basic Arduino support
 - Additional cores (ESP8266, ESP32, etc.) can be configured via build arguments
 - Core index is updated for latest package information
 
-### 2. VS Code Configuration  
+### 2. VS Code Configuration
+
 - **C++ IntelliSense**: Automatically configured with detected platform include paths and compiler definitions
 - **Arduino Extension**: Installed and configured to use Arduino CLI
 - **Project Settings**: Board FQBN, port, and sketch location auto-configured based on detected platform
 
 ### 3. Board Auto-Detection & Platform Configuration
+
 - **Smart Board Detection**: Automatically detects connected Arduino boards using `arduino-cli board list`
 - **Dynamic Configuration**: Workspace automatically configured based on detected board:
   - Port (e.g., `/dev/ttyACM0`, `/dev/ttyUSB0`)
@@ -41,23 +44,29 @@ When the devcontainer is created, the following setup happens automatically:
 The setup script automatically detects and configures your Arduino development environment:
 
 ### 1. Automatic Board Detection
+
 ```bash
 arduino-cli board list
 ```
+
 **Example Output:**
-```
+
+```bash
 Port         Protocol Type              Board Name  FQBN            Core
 /dev/ttyACM0 serial   Serial Port (USB) Arduino Uno arduino:avr:uno arduino:avr
 ```
 
 ### 2. Smart Configuration
+
 Based on detected board, the script automatically configures:
+
 - **VS Code Arduino Extension** (`arduino.json`)
-- **C++ IntelliSense** (`c_cpp_properties.json`) 
+- **C++ IntelliSense** (`c_cpp_properties.json`)
 - **Board-specific settings** (FQBN, port, variant, defines)
 - **Device permissions** for upload access
 
 ### 3. Supported Board Types
+
 | Board Family | Example FQBN | Variant | Defines | Tested |
 |--------------|--------------|---------|---------|--------|
 | Arduino Uno | `arduino:avr:uno` | `standard` | `ARDUINO_AVR_UNO`, `__AVR_ATmega328P__` | ✅ |
@@ -68,7 +77,9 @@ Based on detected board, the script automatically configures:
 | ESP32 | `esp32:esp32:*` | `nodemcu-32s` | `ARDUINO_NodeMCU_32S`, `ESP32` | ❌ |
 
 ### 4. Fallback Behavior
+
 If no board is detected, the script falls back to using installed cores with this priority:
+
 1. ESP32 (if `esp32:esp32` core installed)
 2. ESP8266 (if `esp8266:esp8266` core installed)  
 3. Arduino AVR (default fallback)
@@ -130,6 +141,7 @@ Multiple platforms can be specified comma-separated:
 ```
 
 ### Add Libraries
+
 Add library installation to `setup-arduino.sh`:
 
 ```bash
@@ -141,23 +153,30 @@ arduino-cli lib install "ArduinoJson"
 ## Troubleshooting
 
 ### Board Not Detected
+
 If your board isn't automatically detected:
 
 1. **Check Connection**: Ensure the Arduino is connected via USB
 2. **Check Device**: Verify device appears in `/dev/`
+
    ```bash
    ls /dev/tty*
    ```
+
 3. **Manual Detection**: Run board detection manually
+
    ```bash
    arduino-cli board list
    ```
+
 4. **Permission Issues**: If you see permission denied errors:
+
    ```bash
    sudo chmod 666 /dev/ttyACM0  # Replace with your device
    ```
 
 ### Upload Permission Errors
+
 The setup script automatically fixes permissions, but if you encounter issues:
 
 ```bash
@@ -172,6 +191,7 @@ sudo usermod -a -G dialout,sudo vscode
 ```
 
 ### Wrong Board Configuration
+
 If the wrong board is detected, manually edit `.vscode/arduino.json`:
 
 ```json
@@ -185,7 +205,9 @@ If the wrong board is detected, manually edit `.vscode/arduino.json`:
 ```
 
 ### Re-run Configuration
+
 To re-detect and reconfigure:
+
 ```bash
 bash .devcontainer/setup-arduino.sh
 ```
