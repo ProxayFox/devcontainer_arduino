@@ -67,6 +67,7 @@
             minicom
             screen
             picocom
+            socat
           ];
           
           commands = [
