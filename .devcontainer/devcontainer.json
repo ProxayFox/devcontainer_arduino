@@ -12,18 +12,21 @@
 		 }
 	},
 
-	// Set *default* container specific settings.json values on container create.
-	"settings": { 
-		"arduino.path": "/opt/arduino",
-		"arduino.logLevel": "verbose"
+	"customizations": {
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"settings": { 
+				"arduino.path": "/opt/arduino",
+				"arduino.logLevel": "verbose"
+			},
+			// Set *default* container specific settings.json values on container create.
+			"extensions": [
+				"vsciot-vscode.vscode-arduino",
+				"yzhang.markdown-all-in-one",
+				"vsciot-vscode.vscode-arduino"
+			]
+		}
 	},
-
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"vsciot-vscode.vscode-arduino",
-		"yzhang.markdown-all-in-one",
-		"vsciot-vscode.vscode-arduino"
-	],
 
 	"mounts": [
 		"source=/dev,target=/dev,type=bind"
