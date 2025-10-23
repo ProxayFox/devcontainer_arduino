@@ -22,12 +22,53 @@ This devcontainer has been tested with the following environment:
 
 ## How to use the devcontainer
 
-1) Open the project in VSCode: `File->Open Folder`
-2) Reopen it in devcontainer:
+1) **Choose your Arduino platform** by editing `devcontainer.json`:
+   - **Default (Arduino AVR)**: Leave `PACKAGE_URL` and `PLATFORM` empty
+   - **ESP8266**: Set `PACKAGE_URL` to ESP8266 board manager URL and `PLATFORM` to `"esp8266:esp8266"`
+   - **ESP32**: Set `PACKAGE_URL` to ESP32 board manager URL and `PLATFORM` to `"esp32:esp32"`
+   - **See `.devcontainer/PLATFORM_EXAMPLES.md` for complete examples**
+
+2) Open the project in VSCode: `File->Open Folder`
+
+3) Reopen it in devcontainer:
    1) `CTRL+SHIFT+P` to open the command pallet
    2) `Remote-Containers: Reopen in container`
 
+4) **Wait for automatic setup**: The devcontainer will automatically:
+   - Install Arduino CLI and specified cores
+   - Auto-detect your platform and configure IntelliSense accordingly
+   - Set up proper include paths and compiler settings
+   - Configure VS Code Arduino extension
+
+## Platform Auto-Detection
+
+The setup script automatically detects installed Arduino cores and configures the environment for the best available platform:
+
+- **🏆 Priority Order**: ESP32 > ESP8266 > Arduino AVR
+- **🎯 Smart Configuration**: Include paths, compiler settings, and board definitions automatically set
+- **📋 Board Selection**: Automatically selects optimal board (e.g., NodeMCU for ESP8266, ESP32 Dev Module for ESP32)
+
 ## Inside the devcontainer
+
+The Arduino development environment is fully configured and ready to use. You'll have:
+
+- ✅ **Full IntelliSense support** for Arduino functions (`Serial`, `digitalWrite`, etc.)
+- ✅ **Arduino CLI** pre-installed with AVR core
+- ✅ **VS Code Arduino extension** properly configured
+- ✅ **Automatic compilation** and upload capabilities
+
+### Quick Commands
+
+**From Terminal:**
+```bash
+# Compile the sketch
+arduino-cli compile --fqbn arduino:avr:leonardo src/hello-world
+
+# Upload to device (make sure device is connected)
+arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:leonardo src/hello-world
+```
+
+**From VS Code (using Command Palette or shortcuts):**
 
 Most of the option below are also available from the status bar
 
